@@ -1,45 +1,17 @@
 #include "ros/ros.h"
+#include "tf/tf.h"
 #include "sensor_msgs/NavSatFix.h"
 #include "sensor_msgs/Imu.h"
 #include "geometry_msgs/TwistStamped.h"
 #include <stdio.h>
+#include <iostream>
 #include <math.h>
 
 #include "kalman_gps_acc/Vector.h"
 #include "kalman_gps_acc/Matrix.h"
+#include "kalman_gps_acc/Kalman_Filter.h"
 
 using namespace std;
-
-
-//~ class Vector2D{
-	//~ private:
-	
-	//~ public:
-	//~ Vector2D();
-	//~ void setEntry(int row, double val);
-	//~ double v[2];
-	//~ void printVector();
-	//~ double getY();
-	//~ double getX();
-	
-//~ };
-
-//~ class Matrix2D{
-	//~ private:
-	 //~ double m[2][2];
-	 
-	//~ public:
-	 //~ Matrix2D();
-	 //~ void setEntry(int row, int col, double val);
-	 //~ Matrix2D multiply(Matrix2D m2);
-	 //~ Matrix2D add(Matrix2D m2);
-	 //~ Matrix2D itentityMatrix();
-	 //~ Vector2D multiply(Vector2D v);
-	 //~ Matrix2D scalarMultiply(double val);
-	 //~ void printMatrix();
-//~ };
-
-
 
 ros::Subscriber acc_subscriber;
 ros::Subscriber gps_subscriber;
@@ -130,13 +102,15 @@ void sensor_fusion_acc_vel(){
 //}
 
 void vel_callback(const geometry_msgs::TwistStamped::ConstPtr & msg){
+	ros::Time current = msg->header.stamp;
 	vel_data.twist.linear.x = msg->twist.linear.x;
 	vel_data.twist.linear.y = msg->twist.linear.y;
 	printf("VEL: %f, %f\n", msg->twist.linear.x, msg->twist.linear.y);
+	std::cout << current << std::endl;
 }
 
 void gps_callback(const sensor_msgs::NavSatFix::ConstPtr & msg){
-	
+	ros::Time current = msg->header.stamp;
 	gps_data[0] = (RE+msg->altitude)*cos(msg->latitude)*cos(msg->longitude)-gps_start_position[0];
 	gps_data[1] = (RE+msg->altitude)*cos(msg->latitude)*sin(msg->longitude)-gps_start_position[1];
 	gps_data[2] = (RE+msg->altitude)*sin(msg->latitude)-gps_start_position[2];
@@ -151,9 +125,11 @@ void gps_callback(const sensor_msgs::NavSatFix::ConstPtr & msg){
 	printf("GPS_ECEF: %f, %f, %f\n", gps_data[0], gps_data[1], gps_data[2]);
 	
 	//printf("GPS: %f, %f, %f\n", gps_data.latitude, gps_data.longitude, gps_data.altitude);
+	std::cout << current << std::endl;
 }
 
 void acc_callback(const sensor_msgs::Imu::ConstPtr & msg){
+	ros::Time current = msg->header.stamp;
 	acc_data.linear_acceleration.x = msg->linear_acceleration.x;
 	acc_data.linear_acceleration.y = msg->linear_acceleration.y;
 	acc_data.linear_acceleration.z = msg->linear_acceleration.z;
@@ -163,7 +139,8 @@ void acc_callback(const sensor_msgs::Imu::ConstPtr & msg){
 	//acc_data.linear_acceleration_covariance[3] = msg->linear_acceleration_covariance[3];
 	//acc_data.linear_acceleration_covariance[4] = msg->linear_acceleration_covariance[4];
 	sensor_fusion_acc_vel();
-	//printf("ACC: %f, %f, %f\n", acc_data.linear_acceleration.x, acc_data.linear_acceleration.y,acc_data.linear_acceleration.z);
+	printf("ACC: %f, %f, %f\n", acc_data.linear_acceleration.x, acc_data.linear_acceleration.y,acc_data.linear_acceleration.z);
+	std::cout << current << std::endl;
 }
 
 

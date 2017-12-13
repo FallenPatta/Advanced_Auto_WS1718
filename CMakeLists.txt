@@ -13,6 +13,7 @@ find_package(catkin REQUIRED)
 find_package(catkin REQUIRED COMPONENTS 
   roscpp
   rospy
+  tf
   std_msgs
   geometry_msgs
   sensor_msgs
@@ -110,7 +111,7 @@ ${catkin_INCLUDE_DIRS}
 ## Declare a C++ executable
 
 
-add_executable(kalman_gps_acc_node src/kalman_gps_acc.cpp src/Matrix.cpp src/Vector.cpp)
+add_executable(kalman_gps_acc_node src/kalman_gps_acc.cpp src/Matrix.cpp src/Vector.cpp src/Kalman_Filter.cpp)
 target_link_libraries(kalman_gps_acc_node ${catkin_LIBRARIES})
 #add_dependencies(robot_cleaner_node tutorial_gencpp)
 ## With catkin_make all packages are built within a single CMake context

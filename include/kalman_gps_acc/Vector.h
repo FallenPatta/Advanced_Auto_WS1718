@@ -17,4 +17,4 @@ class Vector2D{
 };
 
 
-#endif
+#endif //GEOM_VECTOR_H_
