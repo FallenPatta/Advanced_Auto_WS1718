@@ -5,36 +5,39 @@
 #include <stdio.h>
 #include <math.h>
 
+#include "kalman_gps_acc/Vector.h"
+#include "kalman_gps_acc/Matrix.h"
+
 using namespace std;
 
 
-class Vector2D{
-	private:
+//~ class Vector2D{
+	//~ private:
 	
-	public:
-	Vector2D();
-	void setEntry(int row, double val);
-	double v[2];
-	void printVector();
-	double getY();
-	double getX();
+	//~ public:
+	//~ Vector2D();
+	//~ void setEntry(int row, double val);
+	//~ double v[2];
+	//~ void printVector();
+	//~ double getY();
+	//~ double getX();
 	
-};
+//~ };
 
-class Matrix2D{
-	private:
-	 double m[2][2];
+//~ class Matrix2D{
+	//~ private:
+	 //~ double m[2][2];
 	 
-	public:
-	 Matrix2D();
-	 void setEntry(int row, int col, double val);
-	 Matrix2D multiply(Matrix2D m2);
-	 Matrix2D add(Matrix2D m2);
-	 Matrix2D itentityMatrix();
-	 Vector2D multiply(Vector2D v);
-	 Matrix2D scalarMultiply(double val);
-	 void printMatrix();
-};
+	//~ public:
+	 //~ Matrix2D();
+	 //~ void setEntry(int row, int col, double val);
+	 //~ Matrix2D multiply(Matrix2D m2);
+	 //~ Matrix2D add(Matrix2D m2);
+	 //~ Matrix2D itentityMatrix();
+	 //~ Vector2D multiply(Vector2D v);
+	 //~ Matrix2D scalarMultiply(double val);
+	 //~ void printMatrix();
+//~ };
 
 
 
@@ -171,94 +174,3 @@ void acc_callback(const sensor_msgs::Imu::ConstPtr & msg){
 double deg2rad(double ang_deg){
 	return ang_deg*PI/180.0;
 }
-
-
-	Matrix2D::Matrix2D(){
-		for(int y=0;y<2;y++)
-			for(int x=0;x<2;x++)
-				m[y][x] = 0;
-	}
-	
-	void Matrix2D::setEntry(int row, int col, double val){
-		m[row][col] = val;
-	}
-	
-	Matrix2D Matrix2D::multiply(Matrix2D m2){
-		Matrix2D result;
-		
-		result.m[0][0] = this->m[0][0]*m2.m[0][0]+this->m[0][1]*m2.m[1][0];
-		result.m[0][1] = this->m[0][0]*m2.m[0][1]+this->m[0][1]*m2.m[1][1];
-		
-		result.m[1][0] = this->m[1][0]*m2.m[0][0]+this->m[1][1]*m2.m[1][0];
-		result.m[1][1] = this->m[1][0]*m2.m[0][1]+this->m[1][1]*m2.m[1][1];
-
-		return result;
-	}
-	
-	Vector2D Matrix2D::multiply(Vector2D v){
-		Vector2D result;
-		
-		result.v[0] = this->m[0][0]*v.v[0]+this->m[0][1]*v.v[1];
-		result.v[0] = this->m[1][0]*v.v[0]+this->m[1][1]*v.v[1];
-
-		return result;
-	}
-	
-	void Matrix2D::printMatrix(){
-		
-		printf("[");
-		for(int y=0;y<2;y++){
-			for(int x=0;x<2;x++){
-				printf("%f ", this->m[y][x]);
-			}
-			if(y==0)
-				printf("\n");
-		}
-		printf("]\n");
-	}
-	
-	Matrix2D Matrix2D::add(Matrix2D m2){
-		Matrix2D result;
-		for(int y=0;y<2;y++)
-			for(int x=0;x<2;x++)
-				result.m[y][x] = this->m[y][x]+m2.m[y][x];
-		return result;
-	}
-	
-	Matrix2D Matrix2D::scalarMultiply(double val){
-		Matrix2D result;
-		for(int y=0;y<2;y++)
-			for(int x=0;x<2;x++)
-				result.m[y][x] = this->m[y][x]*val;
-		return result;
-	}
-	
-	
-	Matrix2D Matrix2D::itentityMatrix(){
-		Matrix2D result;
-		result.setEntry(0,0,1);
-		result.setEntry(1,1,1);
-		return result;
-	}
-	
-	Vector2D::Vector2D(){
-		this->v[0]=0;
-		this->v[1] = 1;
-	}
-	
-	void Vector2D::setEntry(int row, double val){
-		this->v[row] = val;
-	}
-	
-	void Vector2D::printVector(){
-		
-			printf("[%f, %f]'\n", this->v[0], this->v[1]);
-	}
-	
-	double Vector2D::getX(){
-		return this->v[0];
-	}
-	
-	double Vector2D::getY(){
-		return this->v[1];
-	}

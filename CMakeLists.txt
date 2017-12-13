@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(kalman_gps_acc)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -110,7 +110,7 @@ ${catkin_INCLUDE_DIRS}
 ## Declare a C++ executable
 
 
-add_executable(kalman_gps_acc_node src/kalman_gps_acc.cpp)
+add_executable(kalman_gps_acc_node src/kalman_gps_acc.cpp src/Matrix.cpp src/Vector.cpp)
 target_link_libraries(kalman_gps_acc_node ${catkin_LIBRARIES})
 #add_dependencies(robot_cleaner_node tutorial_gencpp)
 ## With catkin_make all packages are built within a single CMake context
