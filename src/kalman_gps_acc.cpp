@@ -7,11 +7,19 @@
 #include <iostream>
 #include <math.h>
 
-#include "kalman_gps_acc/Vector.h"
-#include "kalman_gps_acc/Matrix.h"
+#include <opencv2/core/core.hpp>
+#include <opencv2/opencv.hpp>
+#include "opencv2/core/matx.hpp"
+#include "opencv2/core/types.hpp"
+#include "opencv2/core/bufferpool.hpp"
+#include "opencv2/core/mat.inl.hpp"
+
+#include "kalman_gps_acc/State_Vector.h"
 #include "kalman_gps_acc/Kalman_Filter.h"
+#include "kalman_gps_acc/definitions.h"
 
 using namespace std;
+using namespace cv;
 
 ros::Subscriber acc_subscriber;
 ros::Subscriber gps_subscriber;
@@ -34,14 +42,20 @@ void vel_callback(const geometry_msgs::TwistStamped::ConstPtr & msg);
 void sensor_fusion_acc_vel();
 
 // Kalman filter 1: vel+acc
-Matrix2D Sigma_acc, Sigma_vel;
+//~ Matrix2D Sigma_acc, Sigma_vel;
 
-double covariance_acc = 0.1;
-double covariance_vel = 0.01;
+double covariance_acc = 0.00001;
+double covariance_vel = 0.5;
 
 
 
 int main(int argc, char **argv) {
+	
+	if(sizeof(double) != 8){
+		cerr << "ERROR: DOUBLE WORD IS NOT OF 8 BYTE WIDTH" << endl;
+		return -1;
+	}
+	
 	ros::init(argc, argv, "kalman_gps_acc");
 	ros::NodeHandle n;
 	acc_subscriber = n.subscribe("/imu/data", 10, acc_callback);
@@ -50,17 +64,65 @@ int main(int argc, char **argv) {
 
 	// Init Kalman filter gain matrices
 	
-	Sigma_acc.setEntry(0,0,covariance_acc);
-	Sigma_acc.setEntry(1,1,covariance_acc);
-	Sigma_acc.printMatrix();
+	//~ Sigma_acc.setEntry(0,0,covariance_acc);
+	//~ Sigma_acc.setEntry(1,1,covariance_acc);
+	//~ Sigma_acc.printMatrix();
 	
-	Sigma_vel.setEntry(0,0,covariance_vel);
-	Sigma_vel.setEntry(1,1,covariance_vel);
-	Sigma_vel.printMatrix();
+	//~ Sigma_vel.setEntry(0,0,covariance_vel);
+	//~ Sigma_vel.setEntry(1,1,covariance_vel);
+	//~ Sigma_vel.printMatrix();
 	
+	StateVector2D state = StateVector2D();
+	Vec2f stateX(0,0);
+	Vec2f stateXDot(1,0);
+	state.setX(stateX);
+	state.setXDot(stateXDot);
 	
+	StateVector2D measurementstate = StateVector2D();
+	Vec2f cstateX(1,0);
+	Vec2f cstateXDot(1,0);
+	measurementstate.setX(cstateX);
+	measurementstate.setXDot(cstateXDot);
 	
+		
+	Mat sensor_covariance = Mat(2, 2, MAT_TYPE, double(0));
+	
+	sensor_covariance.at<double>(0,0) = covariance_vel;
+	sensor_covariance.at<double>(0,1) = 0.0f;
+	sensor_covariance.at<double>(1,0) = 0.0f;
+	sensor_covariance.at<double>(1,1) = covariance_acc;
+	
+	Mat model_covariance = Mat(2, 2, MAT_TYPE, double(0));
+	
+	model_covariance.at<double>(0,0) = 0.01f;
+	model_covariance.at<double>(0,1) = 0.0f;
+	model_covariance.at<double>(1,0) = 0.0f;
+	model_covariance.at<double>(1,1) = 0.01f;
 
+	KalmanFilter1 kf = KalmanFilter1();
+
+	StateVector2D aprioriState = StateVector2D(state.getX(), state.getXDot());
+	Mat aprioriCovariance = model_covariance;
+	
+	for(int i = 0; i<10; i++){
+		StateVector2D predicted;
+		StateVector2D corrected;
+		Mat predictedCovariance = Mat(2, 2, MAT_TYPE, double(0));
+		Mat correctedCovariance = Mat(2, 2, MAT_TYPE, double(0));
+		kf.predictState(aprioriState, predicted, 0.1f);
+		kf.predictCovariance(aprioriCovariance, predictedCovariance, 0.1f);
+		kf.correctState(aprioriState, predicted, corrected, measurementstate, 0.1, aprioriCovariance, sensor_covariance, predictedCovariance, correctedCovariance);
+		cout << "Position: " << predicted.getX() << endl;
+		cout << "Speed: " << predicted.getXDot() << endl;
+		cout << "Position/Speed Covariance: \n" << predictedCovariance << endl<< endl;
+		cout << "cPosition: " << corrected.getX() << endl;
+		cout << "cSpeed: " << corrected.getXDot() << endl;
+		cout << "Position/Speed cCovariance: \n" << correctedCovariance << endl<< endl;
+		aprioriCovariance = correctedCovariance;
+		aprioriState = corrected;
+		measurementstate.setX(measurementstate.getX() + measurementstate.getXDot() * 0.5 * 0.01);
+	}
+	
 	//Matrix2D m1;
 	//Matrix2D m2;
 	//m1.setEntry(0,0,1);
