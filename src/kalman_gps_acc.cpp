@@ -54,8 +54,16 @@ StateVector2D global_state = StateVector2D();
 Mat global_covariance = Mat(2, 2, MAT_TYPE, double(0));
 
 StateVector2D imu_state = StateVector2D();
-StateVector2D gps_vel_state = StateVector2D();
+double vX = 0;
+double vY = 0;
+double pX = 0;
+double pY = 0;
 
+StateVector2D gps_vel_state = StateVector2D();
+double gvs_pX = 0;
+double gvs_pY = 0;
+
+StateVector2D gps_state = StateVector2D();
 
 int main(int argc, char **argv) {
 	
@@ -80,55 +88,55 @@ int main(int argc, char **argv) {
 	//~ Sigma_vel.setEntry(1,1,covariance_vel);
 	//~ Sigma_vel.printMatrix();
 	
-	StateVector2D state = StateVector2D();
-	Vec2f stateX(0,0);
-	Vec2f stateXDot(0,0);
-	state.setX(stateX);
-	state.setXDot(stateXDot);
+	//~ StateVector2D state = StateVector2D();
+	//~ Vec2f stateX(0,0);
+	//~ Vec2f stateXDot(0,0);
+	//~ state.setX(stateX);
+	//~ state.setXDot(stateXDot);
 	
-	StateVector2D measurementstate = StateVector2D();
-	Vec2f cstateX(0,0);
-	Vec2f cstateXDot(1,0);
-	measurementstate.setX(cstateX);
-	measurementstate.setXDot(cstateXDot);
+	//~ StateVector2D measurementstate = StateVector2D();
+	//~ Vec2f cstateX(0,0);
+	//~ Vec2f cstateXDot(1,0);
+	//~ measurementstate.setX(cstateX);
+	//~ measurementstate.setXDot(cstateXDot);
 	
 		
-	Mat sensor_covariance = Mat(2, 2, MAT_TYPE, double(0));
+	//~ Mat sensor_covariance = Mat(2, 2, MAT_TYPE, double(0));
 	
-	sensor_covariance.at<double>(0,0) = covariance_vel;
-	sensor_covariance.at<double>(0,1) = 0.0f;
-	sensor_covariance.at<double>(1,0) = 0.0f;
-	sensor_covariance.at<double>(1,1) = covariance_acc;
+	//~ sensor_covariance.at<double>(0,0) = covariance_vel;
+	//~ sensor_covariance.at<double>(0,1) = 0.0f;
+	//~ sensor_covariance.at<double>(1,0) = 0.0f;
+	//~ sensor_covariance.at<double>(1,1) = covariance_acc;
 	
-	Mat model_covariance = Mat(2, 2, MAT_TYPE, double(0));
+	//~ Mat model_covariance = Mat(2, 2, MAT_TYPE, double(0));
 	
-	model_covariance.at<double>(0,0) = 0.05f;
-	model_covariance.at<double>(0,1) = 0.0f;
-	model_covariance.at<double>(1,0) = 0.0f;
-	model_covariance.at<double>(1,1) = 0.05f;
+	//~ model_covariance.at<double>(0,0) = 0.05f;
+	//~ model_covariance.at<double>(0,1) = 0.0f;
+	//~ model_covariance.at<double>(1,0) = 0.0f;
+	//~ model_covariance.at<double>(1,1) = 0.05f;
 
-	StateVector2D aprioriState = StateVector2D(state.getX(), state.getXDot());
-	Mat aprioriCovariance = model_covariance;
+	//~ StateVector2D aprioriState = StateVector2D(state.getX(), state.getXDot());
+	//~ Mat aprioriCovariance = model_covariance;
 	
-	for(int i = 0; i<10; i++){
-		StateVector2D predicted;
-		StateVector2D corrected;
-		Mat predictedCovariance = Mat(2, 2, MAT_TYPE, double(0));
-		Mat correctedCovariance = Mat(2, 2, MAT_TYPE, double(0));
-		kf.predictStateWithControl(aprioriState, predicted, measurementstate, 0.1f);
-		kf.predictCovarianceWithEnv(aprioriCovariance, predictedCovariance, sensor_covariance, 0.1f);
-		kf.correctState(aprioriState, predicted, corrected, measurementstate, 0.1f, aprioriCovariance, sensor_covariance, predictedCovariance, correctedCovariance);
-		cout << "Iteration: " << i << endl;
-		cout << "Position: " << predicted.getX() << endl;
-		cout << "Speed: " << predicted.getXDot() << endl;
-		cout << "Position/Speed Covariance: \n" << predictedCovariance << endl;
-		cout << "cPosition: " << corrected.getX() << endl;
-		cout << "cSpeed: " << corrected.getXDot() << endl;
-		cout << "Position/Speed cCovariance: \n" << correctedCovariance << endl<< endl;
-		aprioriCovariance = correctedCovariance;
-		aprioriState = corrected;
-		measurementstate.setX(measurementstate.getX() + measurementstate.getXDot() * 0.1f);
-	}
+	//~ for(int i = 0; i<10; i++){
+		//~ StateVector2D predicted;
+		//~ StateVector2D corrected;
+		//~ Mat predictedCovariance = Mat(2, 2, MAT_TYPE, double(0));
+		//~ Mat correctedCovariance = Mat(2, 2, MAT_TYPE, double(0));
+		//~ kf.predictStateWithControl(aprioriState, predicted, measurementstate, 0.1f);
+		//~ kf.predictCovarianceWithEnv(aprioriCovariance, predictedCovariance, sensor_covariance, 0.1f);
+		//~ kf.correctState(aprioriState, predicted, corrected, measurementstate, 0.1f, aprioriCovariance, sensor_covariance, predictedCovariance, correctedCovariance);
+		//~ cout << "Iteration: " << i << endl;
+		//~ cout << "Position: " << predicted.getX() << endl;
+		//~ cout << "Speed: " << predicted.getXDot() << endl;
+		//~ cout << "Position/Speed Covariance: \n" << predictedCovariance << endl;
+		//~ cout << "cPosition: " << corrected.getX() << endl;
+		//~ cout << "cSpeed: " << corrected.getXDot() << endl;
+		//~ cout << "Position/Speed cCovariance: \n" << correctedCovariance << endl<< endl;
+		//~ aprioriCovariance = correctedCovariance;
+		//~ aprioriState = corrected;
+		//~ measurementstate.setX(measurementstate.getX() + measurementstate.getXDot() * 0.1f);
+	//~ }
 	
 	//Matrix2D m1;
 	//Matrix2D m2;
@@ -169,8 +177,16 @@ void sensor_fusion_acc_vel(double deltaT, Mat sensor_covariance, StateVector2D m
 	global_state = corrected;
 	global_covariance = correctedCovariance;
 	
-	cout << "State: " << global_state.getX() << endl;
-	cout << "State_: " << global_state.getXDot() << endl;
+	//~ cout << "State: " << global_state.getX() << endl;
+	//~ cout << "State_: " << global_state.getXDot() << endl;
+	
+	vX = global_state.getXDot().val[0];
+	vY = global_state.getXDot().val[1];
+	pX = global_state.getX().val[0];
+	pY = global_state.getX().val[1];
+	
+	gvs_pX = global_state.getX().val[0];
+	gvs_pY = global_state.getX().val[1];
 }
 
 //void LLA2ECEF(float * gps){
@@ -189,8 +205,6 @@ void sensor_fusion_acc_vel(double deltaT, Mat sensor_covariance, StateVector2D m
 
 void vel_callback(const geometry_msgs::TwistStamped::ConstPtr & msg){
 	static ros::Time last = ros::Time::now();
-	static double pX = 0;
-	static double pY = 0;
 	
 	ros::Time current = msg->header.stamp;
 	if((current-last).toSec() < 0){
@@ -228,7 +242,15 @@ void vel_callback(const geometry_msgs::TwistStamped::ConstPtr & msg){
 }
 
 void gps_callback(const sensor_msgs::NavSatFix::ConstPtr & msg){
+	static ros::Time last = ros::Time::now();
+	
 	ros::Time current = msg->header.stamp;
+	if((current-last).toSec() < 0){
+		last = current;
+		return;
+	}
+	double deltaT = (current-last).toSec();
+	
 	gps_data[0] = (RE+msg->altitude)*cos(msg->latitude)*cos(msg->longitude)-gps_start_position[0];
 	gps_data[1] = (RE+msg->altitude)*cos(msg->latitude)*sin(msg->longitude)-gps_start_position[1];
 	gps_data[2] = (RE+msg->altitude)*sin(msg->latitude)-gps_start_position[2];
@@ -240,17 +262,29 @@ void gps_callback(const sensor_msgs::NavSatFix::ConstPtr & msg){
 		}
 		first_iteration=0;
 	}
+	
+	gps_state.setX(Vec2f(gps_data[0], gps_data[1]));
+	gps_state.setXDot(gps_vel_state.getXDot());
+	
+	cout << gps_vel_state.getX() << endl;
+	cout << gps_vel_state.getXDot() << endl;
+	
+	Mat sensor_covariance = Mat(2, 2, MAT_TYPE, double(0));
+	
+	sensor_covariance.at<double>(0,0) = msg->position_covariance[0];
+	sensor_covariance.at<double>(0,1) = msg->position_covariance[1];
+	sensor_covariance.at<double>(1,0) = msg->position_covariance[3];
+	sensor_covariance.at<double>(1,1) = msg->position_covariance[4];
+	
+	sensor_fusion_acc_vel(deltaT, sensor_covariance, gps_state);
 	//~ printf("GPS_ECEF: %f, %f, %f\n", gps_data[0], gps_data[1], gps_data[2]);
 	
 	//printf("GPS: %f, %f, %f\n", gps_data.latitude, gps_data.longitude, gps_data.altitude);
-	std::cout << current << std::endl;
+	//~ std::cout << current << std::endl;
+	last = current;
 }
 
 void acc_callback(const sensor_msgs::Imu::ConstPtr & msg){
-	static double vX = 0;
-	static double vY = 0;
-	static double pX = 0;
-	static double pY = 0;
 	static ros::Time last = ros::Time::now();
 	ros::Time current = msg->header.stamp;
 	if((current-last).toSec() < 0){
@@ -302,7 +336,7 @@ void acc_callback(const sensor_msgs::Imu::ConstPtr & msg){
 	sensor_covariance.at<double>(1,0) = msg->linear_acceleration_covariance[3];
 	sensor_covariance.at<double>(1,1) = msg->linear_acceleration_covariance[4];
 	
-	//~ sensor_fusion_acc_vel(deltaT, sensor_covariance, imu_state);
+	sensor_fusion_acc_vel(deltaT, sensor_covariance, imu_state);
 }
 
 

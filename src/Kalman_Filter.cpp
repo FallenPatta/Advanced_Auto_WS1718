@@ -129,10 +129,8 @@ void KalmanFilter1::correctState(StateVector2D aprioriState, StateVector2D predi
 	//Berechnung von K'
 	Mat inv = (hMat * predictedCov * transposed + sensorCov).inv();
 	Mat kalman_gain_ = predictedCov * transposed * inv;
-	
-	cout << "KGAIN: " << kalman_gain_ << endl;
-	
-	StateVector2D measuredState = aprioriState + matrixStateMultiply(hMat, measurement);
+		
+	StateVector2D measuredState = measurement;
 	
 	correctedState = predictState + matrixStateMultiply(kalman_gain_, measuredState - matrixStateMultiply(hMat, predictState));
 	correctedCov = predictedCov - (kalman_gain_ * hMat * predictedCov);
