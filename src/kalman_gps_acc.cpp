@@ -6,6 +6,7 @@
 #include "geometry_msgs/Quaternion.h"
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
 #include <math.h>
 
 #include <opencv2/core/core.hpp>
@@ -25,13 +26,12 @@ using namespace cv;
 ros::Subscriber acc_subscriber;
 ros::Subscriber gps_subscriber;
 ros::Subscriber vel_subscriber;
-const double PI = 3.14159;
-const double RE = 6378000;
-const double f = 1/298.257223563;
-const double a = 6378137; 
-double b = a*(1-f);
-double e = sqrt((a*a-b*b)/(a*a));
-
+const double PI = 3.14159f;
+const double RE = 6378000.0f;
+const double f = 1.0f/298.257223563f;
+const double a = 6378137.0f; 
+double b = a*(1.0f-f);
+double e = sqrt((pow(a,2.0f)-pow(b,2.0f))/(pow(a,2.0f)));
 
 
 static int first_iteration =1;
@@ -46,6 +46,7 @@ void acc_callback(const sensor_msgs::Imu::ConstPtr & msg);
 void vel_callback(const geometry_msgs::TwistStamped::ConstPtr & msg);
 //void LLA2ECEF(float * gps);
 void sensor_fusion_acc_vel(double, Mat, StateVector2D);
+double deg2rad(double);
 
 // Kalman filter 1: vel+acc
 //~ Matrix2D Sigma_acc, Sigma_vel;
@@ -55,6 +56,8 @@ double covariance_vel = 0.001;
 
 
 KalmanFilter1 kf = KalmanFilter1();
+StateVector2D imu_vel_state = StateVector2D();
+Mat imu_vel_covariance = Mat(2, 2, MAT_TYPE, double(0));
 StateVector2D global_state = StateVector2D();
 Mat global_covariance = Mat(2, 2, MAT_TYPE, double(0));
 
@@ -65,10 +68,16 @@ double pX = 0;
 double pY = 0;
 
 StateVector2D gps_vel_state = StateVector2D();
-double gvs_pX = 0;
-double gvs_pY = 0;
+double vel_pX = 0;
+double vel_pY = 0;
 
 StateVector2D gps_state = StateVector2D();
+
+ofstream outputFile_gps_pos;
+ofstream outputFile_acc_integral;
+ofstream outputFile_vel_integral;
+ofstream outputFile_vel_imu_kalman;
+ofstream outputFile_gps_imu_kalman;
 
 int main(int argc, char **argv) {
 	
@@ -77,92 +86,23 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 	
+	outputFile_gps_pos.open("/tmp/gps_pos.csv", ofstream::out | ofstream::trunc); //Done
+	outputFile_gps_pos.close();
+	outputFile_acc_integral.open("/tmp/imu_pos.csv", ofstream::out | ofstream::trunc); //Done
+	outputFile_acc_integral.close();
+	outputFile_vel_integral.open("/tmp/vel_pos.csv", ofstream::out | ofstream::trunc); //Done
+	outputFile_vel_integral.close();
+	outputFile_vel_imu_kalman.open("/tmp/vel_imu_pos.csv", ofstream::out | ofstream::trunc); //Done
+	outputFile_vel_imu_kalman.close();
+	outputFile_gps_imu_kalman.open("/tmp/gps_imu_pos.csv", ofstream::out | ofstream::trunc); //Done
+	outputFile_gps_imu_kalman.close();
+	
 	ros::init(argc, argv, "kalman_gps_acc");
 	ros::NodeHandle n;
 	acc_subscriber = n.subscribe("/imu/data", 10, acc_callback);
 	gps_subscriber = n.subscribe("/fix", 10, gps_callback);
 	vel_subscriber = n.subscribe("/vel", 10, vel_callback);
 
-	// Init Kalman filter gain matrices
-	
-	//~ Sigma_acc.setEntry(0,0,covariance_acc);
-	//~ Sigma_acc.setEntry(1,1,covariance_acc);
-	//~ Sigma_acc.printMatrix();
-	
-	//~ Sigma_vel.setEntry(0,0,covariance_vel);
-	//~ Sigma_vel.setEntry(1,1,covariance_vel);
-	//~ Sigma_vel.printMatrix();
-	
-	//~ StateVector2D state = StateVector2D();
-	//~ Vec2f stateX(0,0);
-	//~ Vec2f stateXDot(0,0);
-	//~ state.setX(stateX);
-	//~ state.setXDot(stateXDot);
-	
-	//~ StateVector2D measurementstate = StateVector2D();
-	//~ Vec2f cstateX(0,0);
-	//~ Vec2f cstateXDot(1,0);
-	//~ measurementstate.setX(cstateX);
-	//~ measurementstate.setXDot(cstateXDot);
-	
-		
-	//~ Mat sensor_covariance = Mat(2, 2, MAT_TYPE, double(0));
-	
-	//~ sensor_covariance.at<double>(0,0) = covariance_vel;
-	//~ sensor_covariance.at<double>(0,1) = 0.0f;
-	//~ sensor_covariance.at<double>(1,0) = 0.0f;
-	//~ sensor_covariance.at<double>(1,1) = covariance_acc;
-	
-	//~ Mat model_covariance = Mat(2, 2, MAT_TYPE, double(0));
-	
-	//~ model_covariance.at<double>(0,0) = 0.05f;
-	//~ model_covariance.at<double>(0,1) = 0.0f;
-	//~ model_covariance.at<double>(1,0) = 0.0f;
-	//~ model_covariance.at<double>(1,1) = 0.05f;
-
-	//~ StateVector2D aprioriState = StateVector2D(state.getX(), state.getXDot());
-	//~ Mat aprioriCovariance = model_covariance;
-	
-	//~ for(int i = 0; i<10; i++){
-		//~ StateVector2D predicted;
-		//~ StateVector2D corrected;
-		//~ Mat predictedCovariance = Mat(2, 2, MAT_TYPE, double(0));
-		//~ Mat correctedCovariance = Mat(2, 2, MAT_TYPE, double(0));
-		//~ kf.predictStateWithControl(aprioriState, predicted, measurementstate, 0.1f);
-		//~ kf.predictCovarianceWithEnv(aprioriCovariance, predictedCovariance, sensor_covariance, 0.1f);
-		//~ kf.correctState(aprioriState, predicted, corrected, measurementstate, 0.1f, aprioriCovariance, sensor_covariance, predictedCovariance, correctedCovariance);
-		//~ cout << "Iteration: " << i << endl;
-		//~ cout << "Position: " << predicted.getX() << endl;
-		//~ cout << "Speed: " << predicted.getXDot() << endl;
-		//~ cout << "Position/Speed Covariance: \n" << predictedCovariance << endl;
-		//~ cout << "cPosition: " << corrected.getX() << endl;
-		//~ cout << "cSpeed: " << corrected.getXDot() << endl;
-		//~ cout << "Position/Speed cCovariance: \n" << correctedCovariance << endl<< endl;
-		//~ aprioriCovariance = correctedCovariance;
-		//~ aprioriState = corrected;
-		//~ measurementstate.setX(measurementstate.getX() + measurementstate.getXDot() * 0.1f);
-	//~ }
-	
-	//Matrix2D m1;
-	//Matrix2D m2;
-	//m1.setEntry(0,0,1);
-	//m1.setEntry(1,1,1);
-	
-	//m2.setEntry(0,0,1);
-	//m2.setEntry(0,1,2);
-	//m2.setEntry(1,0,3);
-	//m2.setEntry(1,1,4);geometry_msgs::Quaternion
-	
-	//Matrix2D m3 = m2.add(m1);
-	//m3.printMatrix();
-	
-	//Vector2D v1;
-	//v1.setEntry(0,1);
-	//v1.setEntry(1,1);
-	
-	//Vector2D v2 = m1.multiply(v1);
-	//v2.printVector();
-	//kalman_filter();
 	ros::spin();
 }
 
@@ -182,34 +122,24 @@ void sensor_fusion_acc_vel(double deltaT, Mat sensor_covariance, StateVector2D m
 	global_state = corrected;
 	global_covariance = correctedCovariance;
 	
-	//~ cout << "State: " << global_state.getX() << endl;
-	//~ cout << "State_: " << global_state.getXDot() << endl;
-	
 	vX = global_state.getXDot().val[0];
 	vY = global_state.getXDot().val[1];
 	pX = global_state.getX().val[0];
 	pY = global_state.getX().val[1];
 	
-	gvs_pX = global_state.getX().val[0];
-	gvs_pY = global_state.getX().val[1];
+	vel_pX = global_state.getX().val[0];
+	vel_pY = global_state.getX().val[1];
+	
+	//Output
+	outputFile_gps_imu_kalman.open("/tmp/gps_imu_pos.csv", ios::out|ios::app);
+	outputFile_gps_imu_kalman << global_state.getX().val[0] << "," << global_state.getX().val[1] << "," << global_state.getXDot().val[0]<<","<<global_state.getXDot().val[1]<<endl;
+	outputFile_gps_imu_kalman.close();
 }
-
-//void LLA2ECEF(float * gps){
-	//gps[0] = (RE+gps_data.altitude)*cos(gps_data.latitude)*cos(gps_data.longitude)-gps_start_position[0];
-	//gps[1] = (RE+gps_data.altitude)*cos(gps_data.latitude)*sin(gps_data.longitude)-gps_start_position[1];
-	//gps[2] = (RE+gps_data.altitude)*sin(gps_data.latitude)-gps_start_position[2];
-	//if(first_iteration){
-		//for(int i=0;i<3;i++){
-			//gps_start_position[i] = gps[i];
-			//gps[i] =0;
-		//}
-		//first_iteration=0;
-	//}
-	//printf("GPS_ECEF: %f, %f, %f\n", gps[0], gps[1], gps[2]);
-//}
 
 void vel_callback(const geometry_msgs::TwistStamped::ConstPtr & msg){
 	static ros::Time last = ros::Time::now();
+	static double velpX =0;
+	static double velpY =0;
 	
 	ros::Time current = msg->header.stamp;
 	if((current-last).toSec() < 0){
@@ -218,10 +148,17 @@ void vel_callback(const geometry_msgs::TwistStamped::ConstPtr & msg){
 	}
 	double deltaT = (current-last).toSec();
 	
-	pX += msg->twist.linear.x * deltaT;
-	pY += msg->twist.linear.y * deltaT;
+	vel_pX += msg->twist.linear.x * deltaT;
+	vel_pY += msg->twist.linear.y * deltaT;
 	
-	gps_vel_state.setX(Vec2f(pX, pY));
+	velpX += msg->twist.linear.x * deltaT;
+	velpY += msg->twist.linear.y * deltaT;
+	
+	outputFile_vel_integral.open("/tmp/vel_pos.csv", ofstream::out | ofstream::app);
+	outputFile_vel_integral << velpX << "," << velpY << endl;
+	outputFile_vel_integral.close();
+	
+	gps_vel_state.setX(Vec2f(vel_pX, vel_pY));
 	gps_vel_state.setXDot(Vec2f(msg->twist.linear.x, msg->twist.linear.y));
 	
 	Mat sensor_covariance = Mat(2, 2, MAT_TYPE, double(0));
@@ -231,18 +168,8 @@ void vel_callback(const geometry_msgs::TwistStamped::ConstPtr & msg){
 	sensor_covariance.at<double>(1,0) = 0.0f;
 	sensor_covariance.at<double>(1,1) = 0.0001f;
 	
-	//~ cout << deltaT<< endl;
-	//~ cout << sensor_covariance<<endl;
-	//~ cout << gps_vel_state.getX() << endl;
-	//~ cout << gps_vel_state.getXDot() << endl;
-	
 	sensor_fusion_acc_vel(deltaT, sensor_covariance, gps_vel_state);
 	
-	//~ ros::Time current = msg->header.stamp;
-	//~ vel_data.twist.linear.x = msg->twist.linear.x;
-	//~ vel_data.twist.linear.y = msg->twist.linear.y;
-	//~ printf("VEL: %f, %f\n", msg->twist.linear.x, msg->twist.linear.y);
-	//~ std::cout << current << std::endl;
 	last = current;
 }
 
@@ -256,11 +183,11 @@ void gps_callback(const sensor_msgs::NavSatFix::ConstPtr & msg){
 	}
 	double deltaT = (current-last).toSec();
 	
-	double N = a/(sqrt(1-e*e*sin(msg->latitude)*sin(msg->latitude)));
+	double N = a/(sqrt(1.0f-pow(e,2.0f)*pow(sin(msg->latitude),2.0f)));
 	
-	gps_data[0] = (N+msg->altitude)*cos(msg->latitude)*cos(msg->longitude)-gps_start_position[0];
-	gps_data[1] = (N+msg->altitude)*cos(msg->latitude)*sin(msg->longitude)-gps_start_position[1];
-	gps_data[2] = (b*b/(a*a)*N+msg->altitude)*sin(msg->latitude)-gps_start_position[2];
+	gps_data[0] = (N+msg->altitude)*cos(deg2rad(msg->latitude))*cos(deg2rad(msg->longitude))-gps_start_position[0];
+	gps_data[1] = (N+msg->altitude)*cos(deg2rad(msg->latitude))*sin(deg2rad(msg->longitude))-gps_start_position[1];
+	gps_data[2] = 0;
 	// Set start position to (0,0,0) in first iteration
 	if(first_iteration){
 		for(int i=0;i<3;i++){
@@ -273,9 +200,6 @@ void gps_callback(const sensor_msgs::NavSatFix::ConstPtr & msg){
 	gps_state.setX(Vec2f(gps_data[0], gps_data[1]));
 	gps_state.setXDot(gps_vel_state.getXDot());
 	
-	cout << gps_state.getX() << endl;
-	cout << gps_state.getXDot() << endl;
-	
 	Mat sensor_covariance = Mat(2, 2, MAT_TYPE, double(0));
 	
 	sensor_covariance.at<double>(0,0) = msg->position_covariance[0];
@@ -284,14 +208,18 @@ void gps_callback(const sensor_msgs::NavSatFix::ConstPtr & msg){
 	sensor_covariance.at<double>(1,1) = msg->position_covariance[4];
 	
 	sensor_fusion_acc_vel(deltaT, sensor_covariance, gps_state);
-	//~ printf("GPS_ECEF: %f, %f, %f\n", gps_data[0], gps_data[1], gps_data[2]);
 	
-	//printf("GPS: %f, %f, %f\n", gps_data.latitude, gps_data.longitude, gps_data.altitude);
-	//~ std::cout << current << std::endl;
+	outputFile_gps_pos.open("/tmp/gps_pos.csv", ofstream::out | ofstream::app);
+	outputFile_gps_pos << gps_data[0] << "," << gps_data[1] << endl;
+	outputFile_gps_pos.close();
 	last = current;
 }
 
 void acc_callback(const sensor_msgs::Imu::ConstPtr & msg){
+	static double imuX = 0;
+	static double imuY = 0;
+	static double imuVX = 0;
+	static double imuVY = 0;
 	static ros::Time last = ros::Time::now();
 	ros::Time current = msg->header.stamp;
 	if((current-last).toSec() < 0){
@@ -305,18 +233,14 @@ void acc_callback(const sensor_msgs::Imu::ConstPtr & msg){
 	
 	tf::Matrix3x3 m(rotated);
 	
+	double roll, pitch, yaw;
+	m.getRPY(roll,pitch,yaw);
+	
 	tf::Transform topTF1 = tf::Transform(m);
 	
 	tf::Vector3 accVec = tf::Vector3(msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z);
 	
 	tf::Vector3 transformed = topTF1(accVec);
-	
-	//cout << "(" << transformed.getX() << ", " << transformed.getY() << ")" << endl << endl;
-	//~ cout << "(" << roll << ", " << pitch << "," << yaw << ")" << endl << endl;
-	
-	//~ acc_data.linear_acceleration.x = msg->linear_acceleration.x;
-	//~ acc_data.linear_acceleration.y = msg->linear_acceleration.y;
-	//~ acc_data.linear_acceleration.z = msg->linear_acceleration.z;
 	
 	double deltaT = (current-last).toSec();
 	
@@ -325,14 +249,20 @@ void acc_callback(const sensor_msgs::Imu::ConstPtr & msg){
 	
 	vX += transformed.getX()*(current-last).toSec();
 	vY += transformed.getY()*(current-last).toSec();
-		
+	
 	imu_state.setX(Vec2f(pX, pY));
 	imu_state.setXDot(Vec2f(vX, vY));
 	
-	//~ cout << "State: " << imu_state.getX() << endl;
+	//For Output
+	imuX += vX*deltaT + transformed.getX() * 0.5f *deltaT*deltaT;
+	imuY += vY*deltaT + transformed.getY() * 0.5f *deltaT*deltaT;
 	
-	//~ cout << "(" << pX << ", " << pY << ")" << endl << endl;
-	//~ cout << "(" << vX << ", " << vY << ")" << endl << endl;
+	imuVX += transformed.getX()*(current-last).toSec();
+	imuVY += transformed.getY()*(current-last).toSec();
+	
+	outputFile_acc_integral.open("/tmp/imu_pos.csv", ofstream::out | ofstream::app);
+	outputFile_acc_integral << imuX << "," << imuY << endl;
+	outputFile_acc_integral.close();
 	
 	last = current;
 	
@@ -345,11 +275,6 @@ void acc_callback(const sensor_msgs::Imu::ConstPtr & msg){
 	
 	sensor_fusion_acc_vel(deltaT, sensor_covariance, imu_state);
 }
-
-
-
-
-
 
 double deg2rad(double ang_deg){
 	return ang_deg*PI/180.0;
