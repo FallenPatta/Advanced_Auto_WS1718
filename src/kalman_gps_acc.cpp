@@ -27,6 +27,11 @@ ros::Subscriber gps_subscriber;
 ros::Subscriber vel_subscriber;
 const double PI = 3.14159;
 const double RE = 6378000;
+const double f = 1/298.257223563;
+const double a = 6378137; 
+double b = a*(1-f);
+double e = sqrt((a*a-b*b)/(a*a));
+
 
 
 static int first_iteration =1;
@@ -251,9 +256,11 @@ void gps_callback(const sensor_msgs::NavSatFix::ConstPtr & msg){
 	}
 	double deltaT = (current-last).toSec();
 	
-	gps_data[0] = (RE+msg->altitude)*cos(msg->latitude)*cos(msg->longitude)-gps_start_position[0];
-	gps_data[1] = (RE+msg->altitude)*cos(msg->latitude)*sin(msg->longitude)-gps_start_position[1];
-	gps_data[2] = (RE+msg->altitude)*sin(msg->latitude)-gps_start_position[2];
+	double N = a/(sqrt(1-e*e*sin(msg->latitude)*sin(msg->latitude)));
+	
+	gps_data[0] = (N+msg->altitude)*cos(msg->latitude)*cos(msg->longitude)-gps_start_position[0];
+	gps_data[1] = (N+msg->altitude)*cos(msg->latitude)*sin(msg->longitude)-gps_start_position[1];
+	gps_data[2] = (b*b/(a*a)*N+msg->altitude)*sin(msg->latitude)-gps_start_position[2];
 	// Set start position to (0,0,0) in first iteration
 	if(first_iteration){
 		for(int i=0;i<3;i++){
