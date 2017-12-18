@@ -35,9 +35,9 @@ Mat KalmanFilter1::getPredictionMatrix(double deltaT){
 Mat KalmanFilter1::getControlMatrix(double deltaT){
 	Mat predictMatrix = Mat(2, 2, MAT_TYPE, double(0));
 	predictMatrix.at<double>(0,0) = 1;
-	predictMatrix.at<double>(0,1) = 0.5*deltaT*deltaT;
+	predictMatrix.at<double>(0,1) = deltaT;
 	predictMatrix.at<double>(1,0) = 0;
-	predictMatrix.at<double>(1,1) = deltaT;
+	predictMatrix.at<double>(1,1) = 1;
 	return predictMatrix;
 }
 
@@ -48,9 +48,22 @@ Mat KalmanFilter1::getControlMatrix(double deltaT){
 Mat KalmanFilter1::getCorrelationMatrix(double deltaT){
 	Mat predictMatrix = Mat(2, 2, MAT_TYPE, double(0));
 	predictMatrix.at<double>(0,0) = 1;
-	predictMatrix.at<double>(0,1) = 0.5*deltaT*deltaT;
+	predictMatrix.at<double>(0,1) = deltaT;
 	predictMatrix.at<double>(1,0) = 0;
-	predictMatrix.at<double>(1,1) = deltaT;
+	predictMatrix.at<double>(1,1) = 1;
+	return predictMatrix;
+}
+
+/*
+ * For: State(velocity, acceleration) to State(position, velocity)
+ * Literatur: Steuerungsmatrix H
+ */
+Mat KalmanFilter1::getHMatrix(double deltaT){
+	Mat predictMatrix = Mat(2, 2, MAT_TYPE, double(0));
+	predictMatrix.at<double>(0,0) = 1;
+	predictMatrix.at<double>(0,1) = 0;
+	predictMatrix.at<double>(1,0) = 0;
+	predictMatrix.at<double>(1,1) = 1;
 	return predictMatrix;
 }
 
@@ -104,11 +117,23 @@ StateVector2D KalmanFilter1::matrixStateMultiply(Mat m, StateVector2D v){
 
 void KalmanFilter1::correctState(StateVector2D aprioriState, StateVector2D predictState, StateVector2D& correctedState
 					, StateVector2D measurement, double deltaT, Mat aprioriCov, Mat sensorCov, Mat predictedCov, Mat& correctedCov){
-	Mat inv = (predictedCov + sensorCov).inv();
-	Mat kalman_gain = predictedCov * inv;
-	Mat corellation = getControlMatrix(deltaT);
-	StateVector2D measuredState = aprioriState + matrixStateMultiply(corellation, measurement);
+	//Berechnung von K
+	//Mat kalman_gain = predictedCov * inv;
 	
-	correctedState = predictState + matrixStateMultiply(kalman_gain, measuredState - predictState);
-	correctedCov = predictedCov - (kalman_gain * predictedCov);
+	//Matrix H
+	Mat hMat = getHMatrix(deltaT);
+	
+	// H^T
+	cv::Mat transposed =  cv::Mat(hMat.cols, hMat.rows, MAT_TYPE);
+	transpose(hMat, transposed);
+	//Berechnung von K'
+	Mat inv = (hMat * predictedCov * transposed + sensorCov).inv();
+	Mat kalman_gain_ = predictedCov * transposed * inv;
+	
+	cout << "KGAIN: " << kalman_gain_ << endl;
+	
+	StateVector2D measuredState = aprioriState + matrixStateMultiply(hMat, measurement);
+	
+	correctedState = predictState + matrixStateMultiply(kalman_gain_, measuredState - matrixStateMultiply(hMat, predictState));
+	correctedCov = predictedCov - (kalman_gain_ * hMat * predictedCov);
 }

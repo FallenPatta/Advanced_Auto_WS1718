@@ -18,6 +18,7 @@ class KalmanFilter1{
 		Mat getPredictionMatrix(double deltaT);
 		Mat getControlMatrix(double deltaT);
 		Mat getCorrelationMatrix(double);
+		Mat getHMatrix(double);
 	public:
 		StateVector2D matrixStateMultiply(Mat, StateVector2D);
 		void predictCovariance(Mat oldCov, Mat& newCov, double deltaT);
