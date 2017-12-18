@@ -266,8 +266,8 @@ void gps_callback(const sensor_msgs::NavSatFix::ConstPtr & msg){
 	gps_state.setX(Vec2f(gps_data[0], gps_data[1]));
 	gps_state.setXDot(gps_vel_state.getXDot());
 	
-	cout << gps_vel_state.getX() << endl;
-	cout << gps_vel_state.getXDot() << endl;
+	cout << gps_state.getX() << endl;
+	cout << gps_state.getXDot() << endl;
 	
 	Mat sensor_covariance = Mat(2, 2, MAT_TYPE, double(0));
 	
